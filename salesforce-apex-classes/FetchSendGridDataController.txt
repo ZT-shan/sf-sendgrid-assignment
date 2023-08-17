@@ -1,0 +1,71 @@
+public with sharing class FetchSendGridDataController {
+    @AuraEnabled
+    public static List<Object> getContactRecords() {  
+        // Initialize a list to store the fetched records
+        List<Object> EmailActivity = new List<Object>();
+        system.debug('Inside getContactRecords');
+        // Initialize a map to store the result from the HTTP request
+        Map<String, Object> resultMap = new Map<String, Object>();
+ 
+        // Create an HTTP request instance
+        HttpRequest request = new HttpRequest();
+        request.setMethod('GET');
+        request.setEndpoint('https://f754-111-118-246-106.ngrok-free.app/get-activity-records');
+        request.setHeader('Authorization', 'Bearer solvedassesment');
+        request.setTimeout(16000);
+        system.debug('request: '+request);
+        // Create an HTTP instance
+        Http http = new Http();
+        
+        try {
+             // Send the HTTP request and receive the response
+            HttpResponse response = http.send(request);
+            Integer statusCode = response.getStatusCode();
+            String responseBody = response.getBody();
+             // Check if the response status code is 200 (OK)
+            if (statusCode == 200) {
+                system.debug('responseBody: '+responseBody);
+                system.debug('responseBody: '+responseBody.length());
+                system.debug('Goind to deserialize');
+                
+                system.debug('responseBody: '+responseBody);
+                  // Deserialize the response body into a map
+                Map<String, Object> parsedResponse = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+                system.debug('parsedResponse: '+parsedResponse);
+                // Initialize a list to store the records
+                List<Object> records = new List<Object>();
+                
+                // Check if the parsed response contains the 'body' key
+                if (parsedResponse.containsKey('body')) {
+                    Object bodyObject = parsedResponse.get('body');
+                    
+                    // Check if the bodyObject is a list or a map, and handle accordingly
+                    if (bodyObject instanceof List<Object>) {
+                        records = (List<Object>) bodyObject;
+                    } else if (bodyObject instanceof Map<String, Object>) {
+                        records.add(bodyObject);
+                    }
+                } 
+                
+                // Serialize the records list to JSON string and then deserialize it again
+                String jsonStr = JSON.serialize(records);
+                List<Object> recordsBody = (List<Object>) JSON.deserializeUntyped(jsonStr);
+                
+                system.debug('recordsBody: '+recordsBody);
+                system.debug('recordsBody size: '+recordsBody.size());
+
+                // Iterate through the records and add them to the EmailActivity list
+                for(Object rec : recordsBody){
+                    Map<String, Object> recordMap = (Map<String, Object>) rec;
+                    EmailActivity.add(rec);
+                }
+            }
+        } catch (Exception ex) {
+            // Handle any exceptions that occur during the request
+            System.debug('Exception: ' + ex.getMessage());
+        } 
+        // Return the fetched EmailActivity records
+        return EmailActivity;
+    }
+    
+}
